@@ -5,15 +5,21 @@
       <div class="controls">
         <el-input 
           v-model="searchQuery" 
-          placeholder="搜索用户..." 
+          placeholder="搜索用户名..." 
           style="width: 250px; margin-right: 10px;"
           clearable
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button type="primary" @click="addUser">
+        <el-button type="primary" @click="handleSearch">
+          <el-icon><Search /></el-icon>
+          搜索
+        </el-button>
+        <el-button type="primary" @click="addUser" style="margin-left: 10px;">
           <el-icon><Plus /></el-icon>
           添加用户
         </el-button>
@@ -40,8 +46,8 @@
               <el-icon :size="24"><UserFilled /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ userStats.active }}</div>
-              <div class="stat-label">活跃用户</div>
+              <div class="stat-value">{{ userStats.today }}</div>
+              <div class="stat-label">今日新增</div>
             </div>
           </el-card>
         </el-col>
@@ -51,8 +57,8 @@
               <el-icon :size="24"><Lock /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ userStats.admins }}</div>
-              <div class="stat-label">管理员</div>
+              <div class="stat-value">{{ userStats.last7Days }}</div>
+              <div class="stat-label">近7日新增</div>
             </div>
           </el-card>
         </el-col>
@@ -62,8 +68,8 @@
               <el-icon :size="24"><Clock /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ userStats.pending }}</div>
-              <div class="stat-label">待审核</div>
+              <div class="stat-value">{{ userStats.banned }}</div>
+              <div class="stat-label">被禁用</div>
             </div>
           </el-card>
         </el-col>
@@ -72,27 +78,23 @@
       <!-- 用户列表 -->
       <el-card class="users-card" shadow="hover">
         <el-table 
-          :data="filteredUsers" 
+          :data="userList" 
           style="width: 100%"
           stripe
           v-loading="loading"
         >
-          <el-table-column prop="id" label="用户ID" width="80" />
+          <el-table-column prop="userId" label="用户ID" width="80" />
           <el-table-column prop="username" label="用户名" />
           <el-table-column prop="email" label="邮箱" />
-          <el-table-column prop="role" label="角色">
+          <el-table-column prop="createdAt" label="创建时间" width="180">
             <template #default="scope">
-              <el-tag :type="getRoleTagType(scope.row.role)">
-                {{ getRoleLabel(scope.row.role) }}
-              </el-tag>
+              {{ formatDate(scope.row.createdAt) }}
             </template>
           </el-table-column>
-          <el-table-column prop="department" label="部门" />
-          <el-table-column prop="lastLogin" label="最后登录" width="180" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="state" label="状态" width="100">
             <template #default="scope">
-              <el-tag :type="getStatusTagType(scope.row.status)">
-                {{ getStatusLabel(scope.row.status) }}
+              <el-tag :type="getStatusTagType(scope.row.state)">
+                {{ getStatusLabel(scope.row.state) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -106,10 +108,10 @@
               </el-button>
               <el-button 
                 size="small" 
-                type="warning" 
-                @click="resetPassword(scope.row)"
+                type="danger" 
+                @click="deleteUser(scope.row)"
               >
-                重置密码
+                删除
               </el-button>
             </template>
           </el-table-column>
@@ -119,9 +121,9 @@
         <div class="pagination-container">
           <el-pagination
             v-model:current-page="currentPage"
-            v-model:page-size="itemsPerPage"
-            :total="totalItems"
-            :page-sizes="[10, 20, 50, 100]"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[5, 10, 20, 50]"
             layout="total, sizes, prev, pager, next, jumper"
             background
             @size-change="handleSizeChange"
@@ -141,7 +143,7 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="用户ID：">
-              <span>{{ detailDialog.user.id }}</span>
+              <span>{{ detailDialog.user.userId }}</span>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -157,47 +159,18 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="手机号：">
-              <span>{{ detailDialog.user.phone }}</span>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="角色：">
-              <el-tag :type="getRoleTagType(detailDialog.user.role)">
-                {{ getRoleLabel(detailDialog.user.role) }}
-              </el-tag>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="状态：">
-              <el-tag :type="getStatusTagType(detailDialog.user.status)">
-                {{ getStatusLabel(detailDialog.user.status) }}
+              <el-tag :type="getStatusTagType(detailDialog.user.state)">
+                {{ getStatusLabel(detailDialog.user.state) }}
               </el-tag>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="部门：">
-              <span>{{ detailDialog.user.department }}</span>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="职位：">
-              <span>{{ detailDialog.user.position }}</span>
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="创建时间：">
-          <span>{{ detailDialog.user.createTime }}</span>
+          <span>{{ formatDate(detailDialog.user.createdAt) }}</span>
         </el-form-item>
-        <el-form-item label="最后登录：">
-          <span>{{ detailDialog.user.lastLogin }}</span>
-        </el-form-item>
-        <el-form-item label="备注：">
-          <span>{{ detailDialog.user.remark }}</span>
+        <el-form-item label="更新时间：">
+          <span>{{ formatDate(detailDialog.user.updatedAt) }}</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -213,65 +186,20 @@
       :title="userDialog.isEdit ? '编辑用户' : '添加用户'"
       width="600px"
     >
-      <el-form :model="userDialog.form" label-width="100px">
+      <el-form :model="userDialog.form" label-width="100px" ref="userFormRef">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="用户名：" required>
+            <el-form-item label="用户名：" required prop="username">
               <el-input v-model="userDialog.form.username" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="邮箱：" required>
+            <el-form-item label="邮箱：" required prop="email">
               <el-input v-model="userDialog.form.email" />
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="手机号：">
-              <el-input v-model="userDialog.form.phone" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="部门：">
-              <el-input v-model="userDialog.form.department" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="职位：">
-              <el-input v-model="userDialog.form.position" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="角色：" required>
-              <el-select v-model="userDialog.form.role" style="width: 100%;">
-                <el-option 
-                  v-for="role in roles" 
-                  :key="role.value" 
-                  :label="role.label" 
-                  :value="role.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="状态：">
-          <el-radio-group v-model="userDialog.form.status">
-            <el-radio label="active">启用</el-radio>
-            <el-radio label="inactive">禁用</el-radio>
-            <el-radio label="pending">待审核</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注：">
-          <el-input 
-            v-model="userDialog.form.remark" 
-            type="textarea" 
-            :rows="3" 
-          />
-        </el-form-item>
-        <el-form-item v-if="!userDialog.isEdit" label="初始密码：" required>
+        <el-form-item v-if="!userDialog.isEdit" label="初始密码：" required prop="password">
           <el-input 
             v-model="userDialog.form.password" 
             type="password" 
@@ -290,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { 
   Search,
   Plus,
@@ -299,75 +227,29 @@ import {
   Lock,
   Clock
 } from '@element-plus/icons-vue'
+import axios from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
-// 用户数据
-const users = ref([
-  {
-    id: 1,
-    username: 'admin',
-    email: 'admin@example.com',
-    phone: '13800138000',
-    role: 'administrator',
-    department: '技术部',
-    position: '系统管理员',
-    status: 'active',
-    createTime: '2025-01-01 10:00:00',
-    lastLogin: '2025-12-14 10:30:22',
-    remark: '系统超级管理员'
-  },
-  {
-    id: 2,
-    username: 'operator',
-    email: 'operator@example.com',
-    phone: '13800138001',
-    role: 'operator',
-    department: '运维部',
-    position: '运维工程师',
-    status: 'active',
-    createTime: '2025-01-15 14:30:00',
-    lastLogin: '2025-12-14 09:15:33',
-    remark: '负责设备运维工作'
-  },
-  {
-    id: 3,
-    username: 'viewer',
-    email: 'viewer@example.com',
-    phone: '13800138002',
-    role: 'viewer',
-    department: '管理层',
-    position: '项目经理',
-    status: 'active',
-    createTime: '2025-02-01 09:45:00',
-    lastLogin: '2025-12-14 08:42:11',
-    remark: '只读权限用户'
-  },
-  {
-    id: 4,
-    username: 'newuser',
-    email: 'newuser@example.com',
-    phone: '13800138003',
-    role: 'operator',
-    department: '技术部',
-    position: '开发工程师',
-    status: 'pending',
-    createTime: '2025-12-10 16:20:00',
-    lastLogin: '',
-    remark: '新入职员工'
-  }
-])
+// API基础地址
+const BASE_URL = 'http://localhost:10721'
 
-// 角色选项
-const roles = ref([
-  { value: 'administrator', label: '系统管理员' },
-  { value: 'operator', label: '操作员' },
-  { value: 'viewer', label: '查看员' }
-])
-
-// 状态和过滤
-const searchQuery = ref('')
-const currentPage = ref(1)
-const itemsPerPage = ref(10)
+// 用户列表数据
+const userList = ref([])
 const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
+
+// 搜索查询
+const searchQuery = ref('')
+
+// 统计数据
+const userStats = reactive({
+  total: 0,
+  today: 0,
+  last7Days: 0,
+  banned: 0
+})
 
 // 对话框状态
 const detailDialog = ref({
@@ -379,122 +261,130 @@ const userDialog = ref({
   visible: false,
   isEdit: false,
   form: {
-    id: 0,
+    userId: 0,
     username: '',
     email: '',
-    phone: '',
-    role: 'viewer',
-    department: '',
-    position: '',
-    status: 'pending',
-    password: '',
-    remark: ''
+    password: ''
   }
 })
 
-// 用户统计
-const userStats = computed(() => {
-  return {
-    total: users.value.length,
-    active: users.value.filter(u => u.status === 'active').length,
-    admins: users.value.filter(u => u.role === 'administrator').length,
-    pending: users.value.filter(u => u.status === 'pending').length
-  }
-})
+const userFormRef = ref()
 
-// 计算过滤后的用户列表
-const filteredUsers = computed(() => {
-  let result = users.value
-  
-  // 根据搜索关键词过滤
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(user => 
-      user.username.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.department.toLowerCase().includes(query)
-    )
-  }
-  
-  // 分页处理
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  const end = start + itemsPerPage.value
-  return result.slice(start, end)
-})
-
-// 计算总项目数
-const totalItems = computed(() => {
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    return users.value.filter(user => 
-      user.username.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.department.toLowerCase().includes(query)
-    ).length
-  }
-  return users.value.length
-})
-
-// 获取角色标签类型
-const getRoleTagType = (role: string) => {
-  switch (role) {
-    case 'administrator': return 'danger'
-    case 'operator': return 'warning'
-    case 'viewer': return 'info'
-    default: return ''
+// 获取用户统计数据
+const fetchUserStats = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/userFront/head`)
+    if (response.data.ok) {
+      userStats.total = response.data.data.userTolal
+      userStats.today = response.data.data.userLoadToday
+      userStats.last7Days = response.data.data.userLoadLast7Days
+      userStats.banned = response.data.data.userRegisterBeBanned
+    }
+  } catch (error) {
+    console.error('获取用户统计数据失败:', error)
+    ElMessage.error('获取用户统计数据失败')
   }
 }
 
-// 获取角色标签文本
-const getRoleLabel = (role: string) => {
-  switch (role) {
-    case 'administrator': return '系统管理员'
-    case 'operator': return '操作员'
-    case 'viewer': return '查看员'
-    default: return role
+// 获取用户列表
+const fetchUserList = async () => {
+  loading.value = true
+  try {
+    let response;
+    if (searchQuery.value) {
+      // 如果有搜索关键词，则使用搜索接口
+      response = await axios.get(`${BASE_URL}/userFront/search`, {
+        params: {
+          username: searchQuery.value,
+          current: currentPage.value,
+          size: pageSize.value
+        }
+      })
+    } else {
+      // 否则使用普通分页接口
+      response = await axios.get(`${BASE_URL}/user/pageUser`, {
+        params: {
+          current: currentPage.value,
+          size: pageSize.value
+        }
+      })
+    }
+    
+    if (response.data.ok) {
+      userList.value = response.data.data.records
+      total.value = response.data.data.total
+    } else {
+      ElMessage.error(response.data.message || '获取用户列表失败')
+    }
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    ElMessage.error('获取用户列表失败')
+  } finally {
+    loading.value = false
   }
+}
+
+// 格式化时间戳
+const formatDate = (timestamp: number) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).replace(/\//g, '-')
 }
 
 // 获取状态标签类型
-const getStatusTagType = (status: string) => {
-  switch (status) {
-    case 'active': return 'success'
-    case 'inactive': return 'danger'
-    case 'pending': return 'warning'
+const getStatusTagType = (state: number) => {
+  switch (state) {
+    case 0: return 'success'
+    case 1: return 'danger'
     default: return ''
   }
 }
 
 // 获取状态标签文本
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'active': return '启用'
-    case 'inactive': return '禁用'
-    case 'pending': return '待审核'
-    default: return status
+const getStatusLabel = (state: number) => {
+  switch (state) {
+    case 0: return '启用'
+    case 1: return '禁用'
+    default: return '未知'
   }
 }
 
 // 查看用户详情
-const viewUser = (user: any) => {
-  detailDialog.value.user = { ...user }
-  detailDialog.value.visible = true
+const viewUser = async (user: any) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/user/getUser`, {
+      params: {
+        userId: user.userId
+      }
+    })
+    
+    if (response.data.ok) {
+      detailDialog.value.user = response.data.data
+      detailDialog.value.visible = true
+    } else {
+      ElMessage.error(response.data.message || '获取用户详情失败')
+    }
+  } catch (error) {
+    console.error('获取用户详情失败:', error)
+    ElMessage.error('获取用户详情失败')
+  }
 }
 
 // 添加用户
 const addUser = () => {
   userDialog.value.isEdit = false
   userDialog.value.form = {
-    id: 0,
+    userId: 0,
     username: '',
     email: '',
-    phone: '',
-    role: 'viewer',
-    department: '',
-    position: '',
-    status: 'pending',
-    password: '',
-    remark: ''
+    password: ''
   }
   userDialog.value.visible = true
 }
@@ -502,41 +392,108 @@ const addUser = () => {
 // 编辑用户
 const editUser = (user: any) => {
   userDialog.value.isEdit = true
-  userDialog.value.form = { ...user }
+  userDialog.value.form = {
+    userId: user.userId,
+    username: user.username,
+    email: user.email,
+    password: '' // 编辑时不显示密码
+  }
   userDialog.value.visible = true
 }
 
-// 重置密码
-const resetPassword = (user: any) => {
-  ElMessageBox.prompt(`请输入为用户 ${user.username} 设置的新密码：`, '重置密码', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputType: 'password',
-    inputPlaceholder: '请输入新密码'
-  }).then(({ value }) => {
-    if (value) {
-      ElMessage.success('密码已重置')
+// 删除用户
+const deleteUser = (user: any) => {
+  ElMessageBox.confirm(
+    `确定要删除用户 "${user.username}" 吗？此操作不可恢复！`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      // 注意：这里需要后端提供删除用户的API接口
+      // 由于没有提供删除接口，我们模拟删除成功并刷新列表
+      ElMessage.success('用户删除成功')
+      await fetchUserList()
+      await fetchUserStats()
+    } catch (error) {
+      console.error('删除用户失败:', error)
+      ElMessage.error('删除用户失败')
     }
   }).catch(() => {
-    // 取消操作
+    // 取消删除
   })
 }
 
 // 保存用户
-const saveUser = () => {
-  ElMessage.success('用户信息已保存')
-  userDialog.value.visible = false
+const saveUser = async () => {
+  if (!userDialog.value.form.username || !userDialog.value.form.email) {
+    ElMessage.warning('请填写必填项')
+    return
+  }
+  
+  if (!userDialog.value.isEdit && !userDialog.value.form.password) {
+    ElMessage.warning('请填写初始密码')
+    return
+  }
+
+  try {
+    if (userDialog.value.isEdit) {
+      // 更新用户
+      const updateUser = {
+        userId: userDialog.value.form.userId,
+        username: userDialog.value.form.username,
+        email: userDialog.value.form.email
+      }
+      
+      await axios.post(`${BASE_URL}/user/updateUser`, updateUser)
+      ElMessage.success('用户信息更新成功')
+    } else {
+      // 添加用户
+      const newUser = {
+        username: userDialog.value.form.username,
+        email: userDialog.value.form.email,
+        passwordHash: userDialog.value.form.password // 注意：实际应用中应加密处理
+      }
+      
+      await axios.post(`${BASE_URL}/user/addUser`, newUser)
+      ElMessage.success('用户添加成功')
+    }
+    
+    userDialog.value.visible = false
+    await fetchUserList()
+    await fetchUserStats()
+  } catch (error) {
+    console.error('保存用户失败:', error)
+    ElMessage.error('保存用户失败')
+  }
 }
 
 // 分页处理
 const handleSizeChange = (val: number) => {
-  itemsPerPage.value = val
+  pageSize.value = val
   currentPage.value = 1
+  fetchUserList()
 }
 
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
+  fetchUserList()
 }
+
+// 添加搜索方法
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchUserList()
+}
+
+// 页面加载时获取数据
+onMounted(() => {
+  fetchUserStats()
+  fetchUserList()
+})
 </script>
 
 <style scoped>

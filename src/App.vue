@@ -28,9 +28,11 @@ import NotificationPanel from './components/NotificationPanel.vue'
 import DeviceDataManagement from './components/DeviceDataManagement.vue'
 import WorkOrderManagement from './components/WorkOrderManagement.vue'
 import FileManager from './components/FileManager.vue'
+// 数字孪生展示组件
+import DigitalTwinDisplay from './components/DigitalTwinDisplay.vue'
 
 // 定义页面类型
-type PageType = 'dashboard' | 'projects' | 'products' | 'devices' | 'users' | 'permissions' | 'settings' | 'auditlogs' | 'devicedata' | 'workorders' | 'files'
+type PageType = 'dashboard' | 'projects' | 'products' | 'devices' | 'users' | 'permissions' | 'settings' | 'auditlogs' | 'devicedata' | 'workorders' | 'files' | 'digitaltwin'
 
 // 当前页面状态
 const currentPage = ref<PageType>('dashboard')
@@ -48,6 +50,13 @@ const menuItems = ref([
     name: '首页', 
     icon: markRaw(HomeFilled),
     page: 'dashboard'
+  },
+  // 数字孪生展示
+  { 
+    id: 10, 
+    name: '全局大屏数字孪生展示', 
+    icon: markRaw(Monitor),
+    page: 'digitaltwin'
   },
   // 项目管理（含项目-产品-设备三级结构）
   { 
@@ -143,6 +152,12 @@ const handleMainMenuClick = (item: any) => {
   }
 }
 
+// 退出全屏模式
+const exitFullscreen = () => {
+  currentPage.value = 'dashboard'
+  activeMenuItem.value = 1
+}
+
 // 监听自定义导航事件
 onMounted(() => {
   // 检查本地存储中的登录状态
@@ -193,7 +208,7 @@ onMounted(() => {
     
     <!-- 主应用界面 -->
     <template v-else>
-      <div class="app-layout">
+      <div class="app-layout" v-if="currentPage !== 'digitaltwin'">
         <!-- 侧边栏 -->
         <aside class="sidebar">
           <div class="logo">
@@ -264,8 +279,25 @@ onMounted(() => {
             <DeviceDataManagement v-if="currentPage === 'devicedata'" />
             <WorkOrderManagement v-if="currentPage === 'workorders'" />
             <FileManager v-if="currentPage === 'files'" />
+            <!-- 数字孪生展示 -->
+            <DigitalTwinDisplay v-if="currentPage === 'digitaltwin'" />
           </div>
         </main>
+      </div>
+      
+      <!-- 全屏数字孪生展示 -->
+      <div class="fullscreen-digital-twin" v-else>
+        <div class="exit-button">
+          <el-button 
+            type="primary" 
+            @click="exitFullscreen"
+            size="large"
+            round
+          >
+            退出全屏
+          </el-button>
+        </div>
+        <DigitalTwinDisplay />
       </div>
     </template>
   </div>
@@ -375,5 +407,21 @@ onMounted(() => {
   padding: 20px;
   background: #f5f6fa;
   overflow-y: auto;
+}
+
+.fullscreen-digital-twin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+}
+
+.exit-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1001;
 }
 </style>
