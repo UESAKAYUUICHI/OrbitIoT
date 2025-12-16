@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import App from '../App.vue'
-import UserManagement from '../components/UserManagement.vue'
-import PermissionManagement from '../components/PermissionManagement.vue'
+import UserManagement from '../components/user/UserManagement.vue'
+import PermissionManagement from '../components/user/PermissionManagement.vue'
+import AlertCenter from '../components/device/AlertCenter.vue'
+import RealTimeDeviceData from '../components/device/RealTimeDeviceData.vue'
 
 const routes = [
   {
@@ -18,6 +20,16 @@ const routes = [
     path: '/permissions',
     name: 'PermissionManagement',
     component: PermissionManagement
+  },
+  {
+    path: '/alerts',
+    name: 'AlertCenter',
+    component: AlertCenter
+  },
+  {
+    path: '/realtime-data',
+    name: 'RealTimeDeviceData',
+    component: RealTimeDeviceData
   }
 ]
 

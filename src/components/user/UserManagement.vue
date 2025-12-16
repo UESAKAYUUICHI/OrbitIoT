@@ -413,18 +413,26 @@ const deleteUser = (user: any) => {
     }
   ).then(async () => {
     try {
-      // 注意：这里需要后端提供删除用户的API接口
-      // 由于没有提供删除接口，我们模拟删除成功并刷新列表
-      ElMessage.success('用户删除成功')
-      await fetchUserList()
-      await fetchUserStats()
+      const response = await axios.get(`${BASE_URL}/user/deleteUser`, {
+        params: {
+          userId: user.userId
+        }
+      });
+      
+      if (response.data.ok) {
+        ElMessage.success('用户删除成功');
+        await fetchUserList();
+        await fetchUserStats();
+      } else {
+        ElMessage.error(response.data.message || '用户删除失败');
+      }
     } catch (error) {
-      console.error('删除用户失败:', error)
-      ElMessage.error('删除用户失败')
+      console.error('删除用户失败:', error);
+      ElMessage.error('删除用户失败');
     }
   }).catch(() => {
     // 取消删除
-  })
+  });
 }
 
 // 保存用户

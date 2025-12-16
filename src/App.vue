@@ -12,27 +12,32 @@ import {
   SwitchButton,
   Document,
   DataAnalysis,
-  Tools
+  Tools,
+  Bell,
+  Histogram
 } from '@element-plus/icons-vue'
-import Dashboard from './components/Dashboard.vue'
-import SystemSettings from './components/SystemSettings.vue'
-import UserManagement from './components/UserManagement.vue'
-import PermissionManagement from './components/PermissionManagement.vue'
-import ProjectManagement from './components/ProjectManagement.vue'
-import ProductManagement from './components/ProductManagement.vue'
-import DeviceManagement from './components/DeviceManagement.vue'
-import AuditLog from './components/AuditLog.vue'
-import Login from './components/Login.vue'
-import NotificationPanel from './components/NotificationPanel.vue'
+import Dashboard from './components/dashboard/Dashboard.vue'
+import SystemSettings from './components/system/SystemSettings.vue'
+import UserManagement from './components/user/UserManagement.vue'
+import PermissionManagement from './components/user/PermissionManagement.vue'
+import ProjectManagement from './components/project/ProjectManagement.vue'
+import ProductManagement from './components/project/ProductManagement.vue'
+import DeviceManagement from './components/project/DeviceManagement.vue'
+import AuditLog from './components/system/AuditLog.vue'
+import Login from './components/auth/Login.vue'
+import NotificationPanel from './components/dashboard/NotificationPanel.vue'
 // 新增的三个模块
-import DeviceDataManagement from './components/DeviceDataManagement.vue'
-import WorkOrderManagement from './components/WorkOrderManagement.vue'
-import FileManager from './components/FileManager.vue'
+import DeviceDataManagement from './components/device/DeviceDataManagement.vue'
+import WorkOrderManagement from './components/system/WorkOrderManagement.vue'
+import FileManager from './components/system/FileManager.vue'
 // 数字孪生展示组件
-import DigitalTwinDisplay from './components/DigitalTwinDisplay.vue'
+import DigitalTwinDisplay from './components/display/DigitalTwinDisplay.vue'
+// 新增的告警和实时数据组件
+import AlertCenter from './components/device/AlertCenter.vue'
+import RealTimeDeviceData from './components/device/RealTimeDeviceData.vue'
 
 // 定义页面类型
-type PageType = 'dashboard' | 'projects' | 'products' | 'devices' | 'users' | 'permissions' | 'settings' | 'auditlogs' | 'devicedata' | 'workorders' | 'files' | 'digitaltwin'
+type PageType = 'dashboard' | 'projects' | 'products' | 'devices' | 'users' | 'permissions' | 'settings' | 'auditlogs' | 'devicedata' | 'workorders' | 'files' | 'digitaltwin' | 'alerts' | 'realtime'
 
 // 当前页面状态
 const currentPage = ref<PageType>('dashboard')
@@ -77,6 +82,20 @@ const menuItems = ref([
     name: '权限管理', 
     icon: markRaw(Lock),
     page: 'permissions'
+  },
+  // 设备告警中心
+  { 
+    id: 11, 
+    name: '设备告警中心', 
+    icon: markRaw(Bell),
+    page: 'alerts'
+  },
+  // 实时设备数据监控
+  { 
+    id: 12, 
+    name: '实时设备数据', 
+    icon: markRaw(Histogram),
+    page: 'realtime'
   },
   // 资源管理（文件等）
   { 
@@ -281,6 +300,9 @@ onMounted(() => {
             <FileManager v-if="currentPage === 'files'" />
             <!-- 数字孪生展示 -->
             <DigitalTwinDisplay v-if="currentPage === 'digitaltwin'" />
+            <!-- 新增的告警和实时数据模块 -->
+            <AlertCenter v-if="currentPage === 'alerts'" />
+            <RealTimeDeviceData v-if="currentPage === 'realtime'" />
           </div>
         </main>
       </div>

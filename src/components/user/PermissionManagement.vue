@@ -134,8 +134,48 @@
               </div>
             </template>
             
-            <!-- 权限树形列表 -->
+            <!-- 权限总览视图 -->
+            <div v-if="selectedUserId === 0" class="permission-overview">
+              <el-row :gutter="20">
+                <el-col :span="24">
+                  <div class="overview-header">
+                    <h3>系统权限总览</h3>
+                    <p>以下是系统中所有可用的权限模块和具体权限项</p>
+                  </div>
+                </el-col>
+              </el-row>
+              
+              <el-row :gutter="20" class="module-list">
+                <el-col 
+                  v-for="module in permissionTree" 
+                  :key="module.id" 
+                  :xs="24" 
+                  :sm="12" 
+                  :md="8"
+                >
+                  <el-card class="module-card" shadow="hover">
+                    <div class="module-header">
+                      <el-tag type="primary" size="small">模块</el-tag>
+                      <span class="module-name">{{ module.label }}</span>
+                    </div>
+                    <div class="permission-list">
+                      <div 
+                        v-for="permission in module.children" 
+                        :key="permission.id"
+                        class="permission-item"
+                      >
+                        <el-tag type="success" size="small">权限</el-tag>
+                        <span class="permission-name">{{ permission.label }}</span>
+                      </div>
+                    </div>
+                  </el-card>
+                </el-col>
+              </el-row>
+            </div>
+            
+            <!-- 用户权限详情视图 -->
             <el-tree
+              v-else
               ref="permissionTreeRef"
               :data="permissionTree"
               node-key="id"
@@ -429,7 +469,7 @@ const saveUserPermissions = async () => {
   savingPermissions.value = true
   try {
     // 调用后端接口保存用户权限
-    const response = await axios.post(`${BASE_URL}/permission/saveUserPermissions`, 
+    const response = await axios.post(`${BASE_URL}/user/saveUserPermissions`, 
       checkedPermissionIds.value,
       {
         params: {
@@ -686,6 +726,77 @@ onMounted(() => {
 .permission-name {
   margin-left: 10px;
   font-size: 14px;
+}
+
+/* 权限总览样式 */
+.permission-overview {
+  padding: 20px;
+}
+
+.overview-header h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.overview-header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.module-list {
+  margin-top: 20px;
+}
+
+.module-card {
+  margin-bottom: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+}
+
+.module-card :deep(.el-card__body) {
+  padding: 15px;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.module-name {
+  margin-left: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.permission-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.permission-item:last-child {
+  border-bottom: none;
+}
+
+.permission-item .el-tag {
+  flex-shrink: 0;
+}
+
+.permission-name {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #666;
 }
 
 .dialog-footer {
