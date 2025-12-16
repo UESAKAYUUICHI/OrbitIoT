@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, shallowRef, markRaw, onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { 
   HomeFilled, 
   Management, 
   User, 
   Lock,
   Setting,
-  Box,
   Monitor,
   Tickets,
   SwitchButton,
@@ -48,91 +47,91 @@ const currentProduct = ref<any>(null)
 const isLoggedIn = ref(false)
 
 // 侧边栏菜单项
-const menuItems = ref([
+const menuItems = [
   // 首页
   { 
     id: 1, 
     name: '首页', 
-    icon: markRaw(HomeFilled),
+    icon: HomeFilled,
     page: 'dashboard'
   },
   // 数字孪生展示
   { 
     id: 10, 
     name: '全局大屏数字孪生展示', 
-    icon: markRaw(Monitor),
+    icon: Monitor,
     page: 'digitaltwin'
   },
   // 项目管理（含项目-产品-设备三级结构）
   { 
     id: 2, 
     name: '项目管理', 
-    icon: markRaw(Management),
+    icon: Management,
     page: 'projects'
   },
   // 人员管理（用户与权限）
   { 
     id: 3, 
     name: '用户管理', 
-    icon: markRaw(User),
+    icon: User,
     page: 'users'
   },
   { 
     id: 4, 
     name: '权限管理', 
-    icon: markRaw(Lock),
+    icon: Lock,
     page: 'permissions'
   },
   // 设备告警中心
   { 
     id: 11, 
     name: '设备告警中心', 
-    icon: markRaw(Bell),
+    icon: Bell,
     page: 'alerts'
   },
   // 实时设备数据监控
   { 
     id: 12, 
     name: '实时设备数据', 
-    icon: markRaw(Histogram),
+    icon: Histogram,
     page: 'realtime'
   },
   // 资源管理（文件等）
   { 
     id: 9, 
     name: '文件管理', 
-    icon: markRaw(Document),
+    icon: Document,
     page: 'files'
   },
   // 系统配置
   { 
     id: 5, 
     name: '系统设置', 
-    icon: markRaw(Setting),
+    icon: Setting,
     page: 'settings'
   },
   // 设备数据管理
   { 
     id: 7, 
     name: '设备数据管理', 
-    icon: markRaw(DataAnalysis),
+    icon: DataAnalysis,
     page: 'devicedata'
   },
   // 工单管理
   { 
     id: 8, 
     name: '工单管理', 
-    icon: markRaw(Tools),
+    icon: Tools,
     page: 'workorders'
   },
   // 审计日志
   { 
     id: 6, 
     name: '审计日志', 
-    icon: markRaw(Tickets),
+    icon: Tickets,
     page: 'auditlogs'
   }
-])
+]
 
 // 当前选中的菜单项
 const activeMenuItem = ref(1)

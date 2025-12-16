@@ -175,7 +175,6 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="previewDialog.visible = false">关闭</el-button>
-          <el-button type="primary" @click="downloadFile(previewDialog.file)">下载</el-button>
         </span>
       </template>
     </el-dialog>
@@ -483,7 +482,6 @@ const viewFile = (file: any) => {
 
 // 下载文件
 const downloadFile = (file: any) => {
-  ElMessage.success(`开始下载文件: ${file.name}`)
 }
 
 // 删除文件

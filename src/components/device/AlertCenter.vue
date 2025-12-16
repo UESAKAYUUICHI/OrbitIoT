@@ -54,7 +54,7 @@
               <el-icon :size="24"><Warning /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ alertStats.critical }}</div>
+              <div class="stat-value">{{ alertStats.alertDanger }}</div>
               <div class="stat-label">紧急告警</div>
             </div>
           </el-card>
@@ -65,7 +65,7 @@
               <el-icon :size="24"><Bell /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ alertStats.major }}</div>
+              <div class="stat-value">{{ alertStats.alertWarning }}</div>
               <div class="stat-label">重要告警</div>
             </div>
           </el-card>
@@ -76,8 +76,8 @@
               <el-icon :size="24"><InfoFilled /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ alertStats.minor }}</div>
-              <div class="stat-label">一般告警</div>
+              <div class="stat-value">{{ alertStats.alertResolved }}</div>
+              <div class="stat-label">已解决</div>
             </div>
           </el-card>
         </el-col>
@@ -87,8 +87,8 @@
               <el-icon :size="24"><Message /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ alertStats.info }}</div>
-              <div class="stat-label">提示信息</div>
+              <div class="stat-value">{{ alertStats.alertTotal }}</div>
+              <div class="stat-label">告警总数</div>
             </div>
           </el-card>
         </el-col>
@@ -119,9 +119,7 @@
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column prop="id" label="告警ID" width="100" />
           <el-table-column prop="deviceName" label="设备名称" />
-          <el-table-column prop="alertType" label="告警类型" width="120" />
           <el-table-column prop="level" label="级别" width="100">
             <template #default="scope">
               <el-tag :type="getLevelTagType(scope.row.level)">
@@ -130,8 +128,9 @@
             </template>
           </el-table-column>
           <el-table-column prop="message" label="告警描述" />
-          <el-table-column prop="timestamp" label="发生时间" width="180" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="timestamp" label="触发时间" width="180" />
+          <el-table-column prop="resolveTime" label="解决时间" width="180" />
+          <el-table-column prop="status" label="当前状态" width="100">
             <template #default="scope">
               <el-tag :type="getStatusTagType(scope.row.status)">
                 {{ getStatusLabel(scope.row.status) }}
@@ -189,6 +188,10 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
+
+// API基础地址
+const BASE_URL = 'http://localhost:10721'
 
 // 过滤和分页
 const levelFilter = ref('')
@@ -198,6 +201,15 @@ const currentPage = ref(1)
 const itemsPerPage = ref(10)
 const loading = ref(false)
 const selectedAlerts = ref([])
+const total = ref(0)
+
+// 头部统计数据
+const alertStats = ref({
+  alertTotal: 0,
+  alertResolved: 0,
+  alertDanger: 0,
+  alertWarning: 0
+})
 
 // 设备列表
 const devices = ref([
@@ -212,171 +224,130 @@ const devices = ref([
 ])
 
 // 告警数据
-const alerts = ref([
-  {
-    id: 'ALERT001',
-    deviceId: 'DEV001THS',
-    deviceName: '温湿度传感器-001',
-    alertType: '温度过高',
-    level: 'critical',
-    message: '设备温度达到42°C，超过阈值40°C',
-    timestamp: '2025-12-16 14:30:22',
-    status: 'active'
-  },
-  {
-    id: 'ALERT002',
-    deviceId: 'DEV004AQ',
-    deviceName: '空气质量监测器-001',
-    alertType: 'PM2.5超标',
-    level: 'major',
-    message: 'PM2.5浓度达到85μg/m³，超过阈值75μg/m³',
-    timestamp: '2025-12-16 13:45:17',
-    status: 'acknowledged'
-  },
-  {
-    id: 'ALERT003',
-    deviceId: 'DEV007DOOR',
-    deviceName: '门磁传感器-001',
-    alertType: '非法开启',
-    level: 'critical',
-    message: '检测到非授权时间内门被打开',
-    timestamp: '2025-12-16 12:20:05',
-    status: 'active'
-  },
-  {
-    id: 'ALERT004',
-    deviceId: 'DEV002THS',
-    deviceName: '温湿度传感器-002',
-    alertType: '湿度过高',
-    level: 'minor',
-    message: '湿度达到78%，超过阈值75%',
-    timestamp: '2025-12-16 11:15:33',
-    status: 'cleared'
-  },
-  {
-    id: 'ALERT005',
-    deviceId: 'DEV005AQ',
-    deviceName: '空气质量监测器-002',
-    alertType: 'CO2超标',
-    level: 'major',
-    message: 'CO2浓度达到1200ppm，超过阈值1000ppm',
-    timestamp: '2025-12-16 10:30:42',
-    status: 'active'
-  },
-  {
-    id: 'ALERT006',
-    deviceId: 'DEV003THS',
-    deviceName: '温湿度传感器-003',
-    alertType: '通信中断',
-    level: 'major',
-    message: '设备连续5分钟未上报数据',
-    timestamp: '2025-12-16 09:45:18',
-    status: 'active'
-  },
-  {
-    id: 'ALERT007',
-    deviceId: 'DEV008CAM',
-    deviceName: '摄像头-001',
-    alertType: '存储空间不足',
-    level: 'minor',
-    message: '存储空间剩余容量低于10%',
-    timestamp: '2025-12-16 08:22:51',
-    status: 'acknowledged'
-  },
-  {
-    id: 'ALERT008',
-    deviceId: 'DEV001THS',
-    deviceName: '温湿度传感器-001',
-    alertType: '电池电量低',
-    level: 'info',
-    message: '设备电池电量低于20%',
-    timestamp: '2025-12-16 07:15:36',
-    status: 'active'
-  }
-])
-
-// 告警统计
-const alertStats = computed(() => {
-  const stats = {
-    critical: 0,
-    major: 0,
-    minor: 0,
-    info: 0
-  }
-  
-  alerts.value.forEach(alert => {
-    switch (alert.level) {
-      case 'critical':
-        stats.critical++
-        break
-      case 'major':
-        stats.major++
-        break
-      case 'minor':
-        stats.minor++
-        break
-      case 'info':
-        stats.info++
-        break
-    }
-  })
-  
-  return stats
-})
+const alerts = ref<any[]>([])
 
 // 计算过滤后的告警
 const filteredAlerts = computed(() => {
-  let result = alerts.value
-  
-  // 根据级别过滤
-  if (levelFilter.value) {
-    result = result.filter(alert => alert.level === levelFilter.value)
-  }
-  
-  // 根据设备过滤
-  if (deviceFilter.value) {
-    result = result.filter(alert => alert.deviceId === deviceFilter.value)
-  }
-  
-  // 根据日期范围过滤
-  if (dateRange.value && dateRange.value.length === 2) {
-    const [startDate, endDate] = dateRange.value
-    result = result.filter(alert => {
-      const alertDate = new Date(alert.timestamp)
-      return alertDate >= new Date(startDate) && alertDate <= new Date(endDate)
-    })
-  }
-  
-  return result
+  // 注意：在与后端联调时，过滤应该在后端完成，这里仅用于前端临时过滤
+  return alerts.value
 })
 
 // 计算分页数据
 const paginatedAlerts = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  const end = start + itemsPerPage.value
-  return filteredAlerts.value.slice(start, end)
+  // 注意：分页已经在后端完成，这里直接返回数据
+  return filteredAlerts.value
 })
 
 // 计算总项目数
 const totalItems = computed(() => {
-  return filteredAlerts.value.length
+  return total.value
 })
+
+// 格式化时间
+const formatDateTime = (dateTimeArray: number[] | null) => {
+  if (!dateTimeArray || dateTimeArray.length < 5) return '-'
+  
+  // 根据数组长度判断格式
+  if (dateTimeArray.length >= 6) {
+    // 包含秒 [year, month, day, hour, minute, second]
+    return `${dateTimeArray[0]}-${String(dateTimeArray[1]).padStart(2, '0')}-${String(dateTimeArray[2]).padStart(2, '0')} ${String(dateTimeArray[3]).padStart(2, '0')}:${String(dateTimeArray[4]).padStart(2, '0')}:${String(dateTimeArray[5]).padStart(2, '0')}`
+  } else {
+    // 不包含秒 [year, month, day, hour, minute]
+    return `${dateTimeArray[0]}-${String(dateTimeArray[1]).padStart(2, '0')}-${String(dateTimeArray[2]).padStart(2, '0')} ${String(dateTimeArray[3]).padStart(2, '0')}:${String(dateTimeArray[4]).padStart(2, '0')}:00`
+  }
+}
+
+// 获取头部统计数据
+const fetchAlertStats = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/alertFront/head`, {
+      params: {
+        userId: 1 // 示例用户ID，实际应用中应该从登录信息中获取
+      }
+    })
+    
+    if (response.data.ok) {
+      alertStats.value = response.data.data
+    } else {
+      ElMessage.error(response.data.message || '获取告警统计数据失败')
+    }
+  } catch (error: any) {
+    console.error('获取告警统计数据失败:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response)
+      ElMessage.error(`获取告警统计数据失败: ${error.response.status} ${error.response.statusText}`)
+    } else if (error.request) {
+      console.error('无响应:', error.request)
+      ElMessage.error('无法连接到服务器，请检查后端服务是否运行')
+    } else {
+      console.error('请求错误:', error.message)
+      ElMessage.error(`请求错误: ${error.message}`)
+    }
+  }
+}
+
+// 获取告警数据
+const fetchAlerts = async () => {
+  loading.value = true
+  try {
+    // 先检查基础URL是否可达
+    const response = await axios.get(`${BASE_URL}/alert/pageUserDeviceAlerts`, {
+      params: {
+        userId: 1, // 示例用户ID，实际应用中应该从登录信息中获取
+        current: currentPage.value,
+        size: itemsPerPage.value
+      }
+    })
+    
+    if (response.data.ok) {
+      // 映射后端数据到前端需要的格式
+      alerts.value = response.data.data.records.map((item: any) => ({
+        id: item.alertId,
+        deviceId: item.deviceId,
+        deviceName: item.deviceName,
+        level: item.level,
+        message: item.message,
+        timestamp: formatDateTime(item.triggeredAt), // 触发时间
+        resolveTime: formatDateTime(item.resolvedAt), // 解决时间
+        status: item.resolved === 1 ? 'cleared' : 'active' // 根据resolved字段判断状态
+      }))
+      
+      total.value = response.data.data.total
+    } else {
+      ElMessage.error(response.data.message || '获取告警数据失败')
+    }
+  } catch (error: any) {
+    console.error('获取告警数据失败:', error)
+    // 提供更多错误信息以便调试
+    if (error.response) {
+      // 请求已发出，但服务器响应了一个状态码不在2xx范围内的状态码
+      console.error('错误响应:', error.response)
+      ElMessage.error(`获取告警数据失败: ${error.response.status} ${error.response.statusText}`)
+    } else if (error.request) {
+      // 请求已发出，但没有收到响应
+      console.error('无响应:', error.request)
+      ElMessage.error('无法连接到服务器，请检查后端服务是否运行')
+    } else {
+      // 发送请求时发生了某些事情
+      console.error('请求错误:', error.message)
+      ElMessage.error(`请求错误: ${error.message}`)
+    }
+  } finally {
+    loading.value = false
+  }
+}
 
 // 刷新告警
 const refreshAlerts = () => {
-  loading.value = true
-  // 模拟数据加载
-  setTimeout(() => {
-    loading.value = false
-    ElMessage.success('告警数据已刷新')
-  }, 500)
+  fetchAlertStats()
+  fetchAlerts()
 }
 
 // 获取级别标签类型
 const getLevelTagType = (level: string) => {
   switch (level) {
     case 'critical': return 'danger'
-    case 'major': return 'warning'
+    case 'warning': return 'warning' // 后端使用warning而不是major
     case 'minor': return 'info'
     case 'info': return 'primary'
     default: return ''
@@ -387,7 +358,7 @@ const getLevelTagType = (level: string) => {
 const getLevelLabel = (level: string) => {
   switch (level) {
     case 'critical': return '紧急'
-    case 'major': return '重要'
+    case 'warning': return '重要' // 后端使用warning而不是major
     case 'minor': return '一般'
     case 'info': return '提示'
     default: return level
@@ -420,7 +391,7 @@ const handleSelectionChange = (selection: any[]) => {
 }
 
 // 确认告警
-const acknowledgeAlert = (alert: any) => {
+const acknowledgeAlert = async (alert: any) => {
   ElMessageBox.confirm(
     `确定要确认告警 "${alert.message}" 吗？`,
     '确认告警',
@@ -429,20 +400,41 @@ const acknowledgeAlert = (alert: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    // 更新告警状态
-    const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
-    if (alertIndex !== -1) {
-      alerts.value[alertIndex].status = 'acknowledged'
+  ).then(async () => {
+    try {
+      // 调用后端接口更新告警状态
+      const response = await axios.post(`${BASE_URL}/alert/updateAlert`, {
+        id: alert.id,
+        status: 'acknowledged'
+      })
+      
+      if (response.data.ok) {
+        // 更新本地状态
+        const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
+        if (alertIndex !== -1) {
+          alerts.value[alertIndex].status = 'acknowledged'
+        }
+        ElMessage.success('告警已确认')
+      } else {
+        ElMessage.error(response.data.message || '确认告警失败')
+      }
+    } catch (error: any) {
+      console.error('确认告警失败:', error)
+      if (error.response) {
+        ElMessage.error(`确认告警失败: ${error.response.status} ${error.response.statusText}`)
+      } else if (error.request) {
+        ElMessage.error('无法连接到服务器，请检查网络连接')
+      } else {
+        ElMessage.error(`请求错误: ${error.message}`)
+      }
     }
-    ElMessage.success('告警已确认')
   }).catch(() => {
     // 取消操作
   })
 }
 
 // 清除告警
-const clearAlert = (alert: any) => {
+const clearAlert = async (alert: any) => {
   ElMessageBox.confirm(
     `确定要清除告警 "${alert.message}" 吗？`,
     '清除告警',
@@ -451,13 +443,34 @@ const clearAlert = (alert: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    // 更新告警状态
-    const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
-    if (alertIndex !== -1) {
-      alerts.value[alertIndex].status = 'cleared'
+  ).then(async () => {
+    try {
+      // 调用后端接口更新告警状态
+      const response = await axios.post(`${BASE_URL}/alert/updateAlert`, {
+        id: alert.id,
+        status: 'cleared'
+      })
+      
+      if (response.data.ok) {
+        // 更新本地状态
+        const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
+        if (alertIndex !== -1) {
+          alerts.value[alertIndex].status = 'cleared'
+        }
+        ElMessage.success('告警已清除')
+      } else {
+        ElMessage.error(response.data.message || '清除告警失败')
+      }
+    } catch (error: any) {
+      console.error('清除告警失败:', error)
+      if (error.response) {
+        ElMessage.error(`清除告警失败: ${error.response.status} ${error.response.statusText}`)
+      } else if (error.request) {
+        ElMessage.error('无法连接到服务器，请检查网络连接')
+      } else {
+        ElMessage.error(`请求错误: ${error.message}`)
+      }
     }
-    ElMessage.success('告警已清除')
   }).catch(() => {
     // 取消操作
   })
@@ -478,15 +491,38 @@ const acknowledgeSelected = () => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    // 更新选中告警的状态
-    selectedAlerts.value.forEach(alert => {
-      const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
-      if (alertIndex !== -1 && alerts.value[alertIndex].status === 'active') {
-        alerts.value[alertIndex].status = 'acknowledged'
+  ).then(async () => {
+    try {
+      let successCount = 0
+      // 更新选中告警的状态
+      for (const alert of selectedAlerts.value) {
+        const response = await axios.post(`${BASE_URL}/alert/updateAlert`, {
+          id: alert.id,
+          status: 'acknowledged'
+        })
+        
+        if (response.data.ok) {
+          const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
+          if (alertIndex !== -1 && alerts.value[alertIndex].status === 'active') {
+            alerts.value[alertIndex].status = 'acknowledged'
+            successCount++
+          }
+        }
       }
-    })
-    ElMessage.success('选中的告警已确认')
+      
+      ElMessage.success(`成功确认 ${successCount} 个告警`)
+      // 清空选择
+      selectedAlerts.value = []
+    } catch (error: any) {
+      console.error('批量确认告警失败:', error)
+      if (error.response) {
+        ElMessage.error(`批量确认告警失败: ${error.response.status} ${error.response.statusText}`)
+      } else if (error.request) {
+        ElMessage.error('无法连接到服务器，请检查网络连接')
+      } else {
+        ElMessage.error(`请求错误: ${error.message}`)
+      }
+    }
   }).catch(() => {
     // 取消操作
   })
@@ -507,15 +543,38 @@ const clearSelected = () => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    // 更新选中告警的状态
-    selectedAlerts.value.forEach(alert => {
-      const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
-      if (alertIndex !== -1) {
-        alerts.value[alertIndex].status = 'cleared'
+  ).then(async () => {
+    try {
+      let successCount = 0
+      // 更新选中告警的状态
+      for (const alert of selectedAlerts.value) {
+        const response = await axios.post(`${BASE_URL}/alert/updateAlert`, {
+          id: alert.id,
+          status: 'cleared'
+        })
+        
+        if (response.data.ok) {
+          const alertIndex = alerts.value.findIndex(a => a.id === alert.id)
+          if (alertIndex !== -1) {
+            alerts.value[alertIndex].status = 'cleared'
+            successCount++
+          }
+        }
       }
-    })
-    ElMessage.success('选中的告警已清除')
+      
+      ElMessage.success(`成功清除 ${successCount} 个告警`)
+      // 清空选择
+      selectedAlerts.value = []
+    } catch (error: any) {
+      console.error('批量清除告警失败:', error)
+      if (error.response) {
+        ElMessage.error(`批量清除告警失败: ${error.response.status} ${error.response.statusText}`)
+      } else if (error.request) {
+        ElMessage.error('无法连接到服务器，请检查网络连接')
+      } else {
+        ElMessage.error(`请求错误: ${error.message}`)
+      }
+    }
   }).catch(() => {
     // 取消操作
   })
@@ -525,14 +584,18 @@ const clearSelected = () => {
 const handleSizeChange = (val: number) => {
   itemsPerPage.value = val
   currentPage.value = 1
+  fetchAlerts()
 }
 
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
+  fetchAlerts()
 }
 
 onMounted(() => {
-  // 组件挂载时可以加载初始数据
+  // 组件挂载时加载初始数据
+  fetchAlertStats()
+  fetchAlerts()
 })
 </script>
 

@@ -428,10 +428,6 @@ onMounted(async () => {
   margin-bottom: 5px;
 }
 
-.deleted {
-  display: none;
-}
-
 .charts-row {
   margin-bottom: 20px;
 }

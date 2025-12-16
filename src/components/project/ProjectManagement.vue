@@ -417,7 +417,6 @@ const editProject = (project: any) => {
 
 // 保存项目
 const saveProject = () => {
-  ElMessage.success('项目信息已保存')
   projectDialog.value.visible = false
 }
 

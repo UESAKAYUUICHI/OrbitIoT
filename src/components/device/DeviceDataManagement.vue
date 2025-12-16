@@ -350,7 +350,6 @@ const refreshData = () => {
   // 模拟数据加载
   setTimeout(() => {
     loading.value = false
-    ElMessage.success('数据已刷新')
     nextTick(() => {
       initCharts()
     })

@@ -277,7 +277,6 @@ const handleLogin = async () => {
           
           // 发射登录成功事件
           emit('login-success')
-          ElMessage.success('登录成功')
         } else {
           ElMessage.error('用户名或密码错误')
         }
@@ -305,7 +304,6 @@ const handleRegister = async () => {
         }
         
         // 注册成功，自动切换到登录界面
-        ElMessage.success('注册成功，请登录')
         switchToLogin()
       }, 1000)
     }

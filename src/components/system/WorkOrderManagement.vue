@@ -551,7 +551,6 @@ const processWorkOrder = (workOrder: any) => {
       operator: '管理员',
       action: '开始处理工单'
     })
-    ElMessage.success('工单已标记为处理中')
   } else if (workOrder.status === 'processing') {
     workOrder.status = 'completed'
     workOrder.completeTime = new Date().toLocaleString()
@@ -561,7 +560,6 @@ const processWorkOrder = (workOrder: any) => {
       operator: '管理员',
       action: '完成工单处理'
     })
-    ElMessage.success('工单已标记为已完成')
   }
   
   if (detailDialog.value.visible) {
